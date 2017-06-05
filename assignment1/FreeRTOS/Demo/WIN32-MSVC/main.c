@@ -90,7 +90,7 @@ appropriate choice. */
 #define mainREGION_3_SIZE	1107
 
 typedef struct PrintInfo {
-	char *str;
+	const char *str;
 	unsigned int delay;
 } PrintInfo;
 
@@ -146,8 +146,8 @@ int main(void)
 	vTraceInitTraceData();
 	xTickTraceUserEvent = xTraceOpenLabel("tick");
 
-	PrintInfo prTask1 = { "This is Task1111111111\n", 1000 };
-	PrintInfo prTask2 = { "This is Task2222222222\n", 2000 };
+	PrintInfo prTask1 = { "This is Task 1\n", 100 };
+	PrintInfo prTask2 = { "This is Task 2\n", 500 };
 
 	TaskHandle_t handle1, handle2;
 
@@ -226,7 +226,7 @@ void printName(void * pvParameters)
 		printf(prInf->str);
 		fflush(stdout);
 
-		Sleep(prInf->delay);
+		vTaskDelay(prInf->delay / portTICK_PERIOD_MS);
 	}
 }
 
