@@ -89,6 +89,11 @@ appropriate choice. */
 #define mainREGION_2_SIZE	18105
 #define mainREGION_3_SIZE	1107
 
+typedef struct PrintInfo {
+	char *str;
+	unsigned int delay;
+} PrintInfo;
+
 /*
 * This demo uses heap_5.c, so start by defining some heap regions.  This is
 * only done to provide an example as this demo could easily create one large
@@ -106,6 +111,12 @@ void vApplicationMallocFailedHook(void);
 void vApplicationIdleHook(void);
 void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName);
 void vApplicationTickHook(void);
+
+/* 
+* Entry method for assignment1 tasks. Simply prints a string
+* void pvParameters is cast into PrintInfo pointer inside the method.
+*/
+void printName(void * pvParameters);
 
 /*
 * Writes trace data to a disk file when the trace recording is stopped.
@@ -135,8 +146,35 @@ int main(void)
 	vTraceInitTraceData();
 	xTickTraceUserEvent = xTraceOpenLabel("tick");
 
+	PrintInfo prTask1 = { "This is Task1111111111\n", 1000 };
+	PrintInfo prTask2 = { "This is Task2222222222\n", 2000 };
+
+	TaskHandle_t handle1, handle2;
+
+	/* Create task */
+	BaseType_t ret = xTaskCreate(printName, "Task1", 1000, (void *)&prTask1, 3, &handle1);
+	/* Error checking */
+	if (ret != pdPASS) {
+		printf("Something is wrong with task creation\n");
+	}
+	else {
+		printf("Created task\n");
+	}
+
+	/* Create task */
+	ret = xTaskCreate(printName, "Task2", 100, (void *)&prTask2, 1, &handle2);
+	/* Error checking */
+	if (ret != pdPASS) {
+		printf("Something is wrong with task creation\n");
+	} else {
+		printf("Created task\n");
+	}
+
+
 	//This starts the real-time scheduler
+	printf("Before vTaskStartScheduler\n");
 	vTaskStartScheduler();
+	printf("After vTaskStartScheduler\n");
 	for (;; );
 	return 0;
 }
@@ -180,6 +218,18 @@ void vApplicationTickHook(void)
 {
 
 }
+
+void printName(void * pvParameters)
+{
+	PrintInfo *prInf = (PrintInfo *)pvParameters;
+	for ( ;; ) {
+		printf(prInf->str);
+		fflush(stdout);
+
+		Sleep(prInf->delay);
+	}
+}
+
 /*-----------------------------------------------------------*/
 
 void vAssertCalled(unsigned long ulLine, const char * const pcFileName)
