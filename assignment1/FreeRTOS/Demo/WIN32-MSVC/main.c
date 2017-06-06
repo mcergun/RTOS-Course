@@ -89,10 +89,10 @@ appropriate choice. */
 #define mainREGION_2_SIZE	18105
 #define mainREGION_3_SIZE	1107
 
-typedef struct PrintInfo {
+typedef struct TaskInfo {
 	const char *str;
 	unsigned int delay;
-} PrintInfo;
+} TaskInfo;
 
 /*
 * This demo uses heap_5.c, so start by defining some heap regions.  This is
@@ -114,9 +114,9 @@ void vApplicationTickHook(void);
 
 /* 
 * Entry method for assignment1 tasks. Simply prints a string
-* void pvParameters is cast into PrintInfo pointer inside the method.
+* void pvParameters is cast into TaskInfo pointer inside the method.
 */
-void printName(void * pvParameters);
+void printTaskInfo(void * pvParameters);
 
 /*
 * Writes trace data to a disk file when the trace recording is stopped.
@@ -146,13 +146,15 @@ int main(void)
 	vTraceInitTraceData();
 	xTickTraceUserEvent = xTraceOpenLabel("tick");
 
-	PrintInfo prTask1 = { "This is Task 1\n", 100 };
-	PrintInfo prTask2 = { "This is Task 2\n", 500 };
+	/* Fill in details for tasks; name and delay for each cycle */
+	TaskInfo prTask1 = { "This is Task 1\n", 100 };
+	TaskInfo prTask2 = { "This is Task 2\n", 500 };
 
+	/* Keep task handles for possible future usage */
 	TaskHandle_t handle1, handle2;
 
 	/* Create task */
-	BaseType_t ret = xTaskCreate(printName, "Task1", 1000, (void *)&prTask1, 3, &handle1);
+	BaseType_t ret = xTaskCreate(printTaskInfo, "Task1", 1000, (void *)&prTask1, 3, &handle1);
 	/* Error checking */
 	if (ret != pdPASS) {
 		printf("Something is wrong with task creation\n");
@@ -162,7 +164,7 @@ int main(void)
 	}
 
 	/* Create task */
-	ret = xTaskCreate(printName, "Task2", 100, (void *)&prTask2, 1, &handle2);
+	ret = xTaskCreate(printTaskInfo, "Task2", 100, (void *)&prTask2, 1, &handle2);
 	/* Error checking */
 	if (ret != pdPASS) {
 		printf("Something is wrong with task creation\n");
@@ -172,9 +174,7 @@ int main(void)
 
 
 	//This starts the real-time scheduler
-	printf("Before vTaskStartScheduler\n");
 	vTaskStartScheduler();
-	printf("After vTaskStartScheduler\n");
 	for (;; );
 	return 0;
 }
@@ -219,13 +219,15 @@ void vApplicationTickHook(void)
 
 }
 
-void printName(void * pvParameters)
+void printTaskInfo(void * pvParameters)
 {
-	PrintInfo *prInf = (PrintInfo *)pvParameters;
+	TaskInfo *prInf = (TaskInfo *)pvParameters;
 	for ( ;; ) {
 		printf(prInf->str);
 		fflush(stdout);
-
+		/* Use vTaskDelay instead of win32 Sleep as Sleep does not
+		 * yield the thread correctly in RTOS simulation 
+		 */
 		vTaskDelay(prInf->delay / portTICK_PERIOD_MS);
 	}
 }
