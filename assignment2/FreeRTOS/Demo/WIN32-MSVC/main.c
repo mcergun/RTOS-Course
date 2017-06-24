@@ -89,6 +89,19 @@ appropriate choice. */
 #define mainREGION_2_SIZE	18105
 #define mainREGION_3_SIZE	1107
 
+/* Asignment 2 declarations */
+#define SIZE 10
+#define ROW SIZE
+#define COL SIZE
+
+long long tick_cnt = 0;
+long long matrix_time = 0, comm_time = 0;
+TaskHandle_t matrix_handle, communication_handle;
+
+static void matrix_task();
+static void communication_task();
+static void priorityset_task();
+
 /*
 * This demo uses heap_5.c, so start by defining some heap regions.  This is
 * only done to provide an example as this demo could easily create one large
@@ -135,6 +148,9 @@ int main(void)
 	vTraceInitTraceData();
 	xTickTraceUserEvent = xTraceOpenLabel("tick");
 
+	xTaskCreate((pdTASK_CODE)matrix_task, (signed char *)"Matrix", 1000, NULL, 3, &matrix_handle);
+	xTaskCreate((pdTASK_CODE)communication_task, (signed char *)"Communication", configMINIMAL_STACK_SIZE, NULL, 1, &communication_handle);
+
 	//This starts the real-time scheduler
 	vTaskStartScheduler();
 	for (;; );
@@ -178,7 +194,7 @@ void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName)
 
 void vApplicationTickHook(void)
 {
-
+	tick_cnt++;
 }
 /*-----------------------------------------------------------*/
 
@@ -268,3 +284,74 @@ static void  prvInitialiseHeap(void)
 }
 /*-----------------------------------------------------------*/
 
+static void matrix_task()
+{
+	int i;
+	double **a = (double **)pvPortMalloc(ROW * sizeof(double*));
+	for (i = 0; i < ROW; i++) a[i] = (double *)pvPortMalloc(COL * sizeof(double));
+	double **b = (double **)pvPortMalloc(ROW * sizeof(double*));
+	for (i = 0; i < ROW; i++) b[i] = (double *)pvPortMalloc(COL * sizeof(double));
+	double **c = (double **)pvPortMalloc(ROW * sizeof(double*));
+	for (i = 0; i < ROW; i++) c[i] = (double *)pvPortMalloc(COL * sizeof(double));
+
+	double sum = 0.0;
+	int j, k, l;
+
+	for (i = 0; i < SIZE; i++) {
+		for (j = 0; j < SIZE; j++) {
+			a[i][j] = 1.5;
+			b[i][j] = 2.6;
+		}
+	}
+
+	while (1) {
+		long long cur_cnt = tick_cnt;
+		/*
+		* In an embedded systems, matrix multiplication would block the CPU for a long time
+		* but since this is a PC simulator we must add one additional dummy delay.
+		*/
+		long simulationdelay;
+		for (simulationdelay = 0; simulationdelay<1000000000; simulationdelay++)
+			;
+		for (i = 0; i < SIZE; i++) {
+			for (j = 0; j < SIZE; j++) {
+				c[i][j] = 0.0;
+			}
+		}
+
+		for (i = 0; i < SIZE; i++) {
+			for (j = 0; j < SIZE; j++) {
+				sum = 0.0;
+				for (k = 0; k < SIZE; k++) {
+					for (l = 0; l<10; l++) {
+						sum = sum + a[i][k] * b[k][j];
+					}
+				}
+				c[i][j] = sum;
+			}
+		}
+		vTaskDelay(100);
+		matrix_time = tick_cnt - cur_cnt;
+
+		printf("matrix counts = %u\n", matrix_time);
+	}
+}
+
+static void communication_task()
+{
+	while (1) {
+		long long cur_cnt = tick_cnt;
+		printf("Sending data...\n");
+		fflush(stdout);
+		vTaskDelay(100);
+		printf("Data sent!\n");
+		fflush(stdout);
+		vTaskDelay(100);
+		comm_time = tick_cnt - cur_cnt;
+		printf("comm counts = %u\n", comm_time);
+	}
+}
+
+void priorityset_task()
+{
+}
