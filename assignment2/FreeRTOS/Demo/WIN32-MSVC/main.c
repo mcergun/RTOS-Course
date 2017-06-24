@@ -94,8 +94,11 @@ appropriate choice. */
 #define ROW SIZE
 #define COL SIZE
 
+/* Used for calculating each tasks elapsed time */
 long long tick_cnt = 0;
 long long matrix_time = 0, comm_time = 0;
+
+/* Handles for tasks, needed for changing their priorities */
 TaskHandle_t matrix_handle, communication_handle;
 
 static void matrix_task();
@@ -331,8 +334,8 @@ static void matrix_task()
 			}
 		}
 		vTaskDelay(100);
-		matrix_time = tick_cnt - cur_cnt;
-
+		/* Calculate elapsed time in this task */
+		matrix_time = (tick_cnt - cur_cnt) / portTICK_PERIOD_MS;
 		printf("matrix counts = %u\n", matrix_time);
 	}
 }
@@ -347,7 +350,8 @@ static void communication_task()
 		printf("Data sent!\n");
 		fflush(stdout);
 		vTaskDelay(100);
-		comm_time = tick_cnt - cur_cnt;
+		/* Calculate elapsed time in this task */
+		comm_time = (tick_cnt - cur_cnt) / portTICK_PERIOD_MS;
 		printf("comm counts = %u\n", comm_time);
 	}
 }
