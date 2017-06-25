@@ -93,6 +93,10 @@ appropriate choice. */
 #define SIZE 10
 #define ROW SIZE
 #define COL SIZE
+#define COMM_TIME_UPPER_LIMIT 1000
+#define COMM_TIME_LOWER_LIMIT 200
+#define COMM_PRIO_HI 4
+#define COMM_PRIO_LO 2
 
 /* Used for calculating each tasks elapsed time */
 long long tick_cnt = 0;
@@ -153,6 +157,7 @@ int main(void)
 
 	xTaskCreate((pdTASK_CODE)matrix_task, (signed char *)"Matrix", 1000, NULL, 3, &matrix_handle);
 	xTaskCreate((pdTASK_CODE)communication_task, (signed char *)"Communication", configMINIMAL_STACK_SIZE, NULL, 1, &communication_handle);
+	xTaskCreate((pdTASK_CODE)priorityset_task, (signed char *)"PrioritySetter", configMINIMAL_STACK_SIZE, NULL, 1, NULL);
 
 	//This starts the real-time scheduler
 	vTaskStartScheduler();
@@ -197,7 +202,8 @@ void vApplicationStackOverflowHook(TaskHandle_t pxTask, char *pcTaskName)
 
 void vApplicationTickHook(void)
 {
-	tick_cnt++;
+	/* Increment a counter to calculate execution times */
+	++tick_cnt;
 }
 /*-----------------------------------------------------------*/
 
@@ -336,7 +342,7 @@ static void matrix_task()
 		vTaskDelay(100);
 		/* Calculate elapsed time in this task */
 		matrix_time = (tick_cnt - cur_cnt) / portTICK_PERIOD_MS;
-		printf("matrix counts = %u\n", matrix_time);
+		printf("MatrixTask Period = %u\n", matrix_time);
 	}
 }
 
@@ -352,10 +358,22 @@ static void communication_task()
 		vTaskDelay(100);
 		/* Calculate elapsed time in this task */
 		comm_time = (tick_cnt - cur_cnt) / portTICK_PERIOD_MS;
-		printf("comm counts = %u\n", comm_time);
+		printf("CommunicationTask Period = %u\n", comm_time);
 	}
 }
 
 void priorityset_task()
 {
+	while (1) {
+		if (comm_time > COMM_TIME_UPPER_LIMIT) {
+			vTaskPrioritySet(communication_handle, COMM_PRIO_HI);
+			printf("Changing communication priority to %u\n", COMM_PRIO_HI);
+		}
+		/* comm_time has been initialized and it is less than LOWER_LIMIT */
+		if (comm_time && comm_time < COMM_TIME_LOWER_LIMIT) {
+			vTaskPrioritySet(communication_handle, COMM_PRIO_LO);
+			printf("Changing communication priority to %u\n", COMM_PRIO_LO);
+		}
+		vTaskDelay(100);
+	}
 }
